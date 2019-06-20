@@ -4,7 +4,8 @@ import argparse
 import json
 import urllib.request
 import sys
-from jwcrypto import jwk, jws;
+from jose import jws
+from datetime import datetime, timedelta
 
 default_metadata_url = 'https://fedscim-poc.skolfederation.se/md/skolfederation-fedscim-0_1.json'
 
@@ -22,6 +23,8 @@ def get_and_verify(url, keys, output: str) -> bool:
         error_print("Failed to download metadata from", url)
         return False
 
+    jwsdict = json.loads(sig)
+    
     try:
         with open(keys, 'r') as keysfile:
             keyset_str = keysfile.read()
@@ -29,24 +32,27 @@ def get_and_verify(url, keys, output: str) -> bool:
         error_print("Failed to read key set from file", keys)
         return False
 
-    keys_dict = json.loads(keyset_str)
-
-    jwstoken = jws.JWS()
-    jwstoken.deserialize(sig)
-    
-    jws.JWSHeaderRegistry["exp"] = jws.JWSHeaderParameter('Expiration', True, True)
-
-    for k in keys_dict['keys']:
+    payload = jwsdict['payload']
+    for s in jwsdict['signatures']:
         try:
-            key  = jwk.JWK(**k);
-            jwstoken.verify(key)
+            protected = s['protected']
+            signature = s['signature']
+            compact = protected + "." + payload + "." + signature
+
+            exp_header = jws.get_unverified_headers(compact)['exp']
+            exp = datetime.utcfromtimestamp(int(exp_header))
+            if exp < datetime.utcnow():
+                error_print("Signature expired at: " + str(exp))
+                continue
+            
+            verified_payload = jws.verify(compact, keyset_str, None)
             with open(output, 'wb') as outfile:
-                outfile.write(jwstoken.payload)
-            return True
-        except jws.InvalidJWSSignature:
+                outfile.write(verified_payload)
+                return True
+        except jws.JWSError:
             continue
 
-    error_print("Failed to verify the key")
+    error_print("Failed to verify the signature")
     return False
 
 
