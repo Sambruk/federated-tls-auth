@@ -1,14 +1,18 @@
 # Sample client code for federated TLS authentication
 
-This repository is a part of the project XYZ financed by NLnet Foundation.
+This project was funded through NLnet and the NGI0 PET Fund, a fund established
+with financial support from the European Commission's Next Generation Internet
+programme, under the aegis of DG Communications Networks, Content and
+Technology under grant agreement No 825310.
 
-The project is a collaboration between Internetstiftelsen and Sambruk.
+The project is a collaboration between Internetstiftelsen and Föreningen
+Sambruk.
 
-The code was developed originally for the EGIL SCIM client, in order to
-securely connect to and authenticate a SCIM server, with the help of
-authentication metadata from Skolfederation. The code in this repository
-however has no dependencies on the EGIL SCIM client and can be re-used in
-other projects which need to do the same kind of secure communication.
+The code was developed originally for the EGIL SCIM client, in order to securely
+connect to and authenticate a SCIM server, with the help of authentication
+metadata from Skolfederation. The code in this repository however has no
+dependencies on the EGIL SCIM client and can be re-used in other projects which
+need to do the same kind of secure communication.
 
 ## Contents
 
