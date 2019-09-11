@@ -10,6 +10,21 @@ import argparse
 import json
 import sys
 
+# Returns all tags from a server in canonical form (lower case) in a set
+def get_canonical_tags(server) -> frozenset:
+    if 'tags' in server:
+        tags = set()
+        for tag in server['tags']:
+            tags.add(tag.lower())
+        return frozenset(tags)
+    else:
+        return frozenset()
+
+# Converts a set of tags to the format it should be used when
+# printing, or when specifying as argument to e.g. the EGIL client.
+def tag_set_pretty(tags) -> str:
+    return ','.join(tags)
+    
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='List contents in authentication metadata')
@@ -24,11 +39,11 @@ if __name__ == '__main__':
     parser.add_argument('--servers',
                         dest='servers',
                         action='store_true',
-                        help='whether server names should be displayed')
-    parser.add_argument('--clients',
-                        dest='clients',
+                        help='whether server URIs should be displayed')
+    parser.add_argument('--server-tags',
+                        dest='server_tags',
                         action='store_true',
-                        help='whether client names should be displayed')
+                        help='whether server tag combinations should be displayed')
 
     args = parser.parse_args()
 
@@ -46,9 +61,16 @@ if __name__ == '__main__':
             continue
         
         print(entity['entity_id'])
-        if (args.servers and 'servers' in entity):
-            for server in entity['servers']:
-                print("\t", server['name'])
-        if (args.clients and 'clients' in entity):
-            for client in entity['clients']:
-                print("\t", client['name'])
+
+        if 'servers' in entity:
+            if args.servers:
+                for server in entity['servers']:
+                    print("\t", server['base_uri'])
+            if args.server_tags:
+                tag_combinations = set()
+                for server in entity['servers']:
+                    tag_combinations.add(get_canonical_tags(server))
+
+                if len(tag_combinations) > 0:
+                    for tags in tag_combinations:
+                        print("\t", '"' + tag_set_pretty(tags) + '"')
