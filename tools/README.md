@@ -36,7 +36,15 @@ overridden with the `--url` argument.
 ## list_metadata
 A script for listing entities from the metadata.
 
-Before running the script you need to make sure that Python 3 is installed.
+Before running the script you need to make sure that Python 3 and the
+url-normalize package is installed.
+
+For instance, to install on Debian these commands can be used:
+
+```
+sudo apt-get install python3 python3-pip
+sudo pip3 install url-normalize
+```
 
 To list all entities:
 

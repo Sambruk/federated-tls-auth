@@ -9,6 +9,7 @@
 import argparse
 import json
 import sys
+from url_normalize import url_normalize
 
 # Returns all tags from a server in canonical form (lower case) in a set
 def get_canonical_tags(server) -> frozenset:
@@ -24,6 +25,9 @@ def get_canonical_tags(server) -> frozenset:
 # printing, or when specifying as argument to e.g. the EGIL client.
 def tag_set_pretty(tags) -> str:
     return ','.join(tags)
+
+def url_equals(url1, url2) -> bool:
+    return url_normalize(url1) == url_normalize(url2)
     
 if __name__ == '__main__':
 
@@ -57,7 +61,7 @@ if __name__ == '__main__':
     metadata = json.loads(metadata_str)
 
     for entity in metadata['entities']:
-        if (args.entity and args.entity[0] != entity['entity_id']):
+        if args.entity and not url_equals(args.entity[0], entity['entity_id']):
             continue
         
         print(entity['entity_id'])
