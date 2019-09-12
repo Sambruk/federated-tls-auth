@@ -11,11 +11,8 @@ code in fedtlsauth in order to do a secure GET request over HTTPS.
 
 # Dependencies
 
-The re-usable code in `fedtlsauth` uses the Boost C++ libraries. If you only
-wish to use the code in `fedtlsauth` it is enough to have the Boost headers
-available.
-
-The example program depends on libcurl and the Boost library program_options.
+The re-usable code in `fedtlsauth`, as well as the example program,  uses
+the Boost C++ libraries and libcurl.
 
 # Building the example program
 
@@ -35,7 +32,7 @@ entity `example.org`:
 ```
 ./get --metadata /home/joe/git/EgilSCIM/tools/metadata.txt \
       --entity example.org \
-      --server prod \
+      --server-tags scim \
       --cert my.client.cert.pem \
       --key my.private.key.pem \
       --path ServiceProviderConfig

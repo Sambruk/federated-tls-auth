@@ -7,6 +7,68 @@
 
 #include "metadata_parser.hpp"
 #include <boost/property_tree/json_parser.hpp>
+#include <curl/curl.h>
+
+namespace {
+
+#if LIBCURL_VERSION_NUM >= 0x073e00 // 7.62.0
+
+// Properly cleans up a cURL URL handle at end of scope
+class CURL_URL {
+public:
+    CURL_URL(CURLU* h) : guarded(h) {}
+
+    ~CURL_URL() { curl_url_cleanup(guarded); }
+
+    operator CURLU*() const { return guarded; }
+
+private:
+    CURLU* guarded;
+};
+
+#endif
+
+/* Normalizes a URL so we can compare strings
+ * to see if they are logically the same URL.
+ *
+ * Returns the same string if we're using an old
+ * version of cURL without support for URL 
+ * normalization.
+ */
+std::string url_normalize(const std::string& url) {
+#if LIBCURL_VERSION_NUM >= 0x073e00 // 7.62.0
+    CURL_URL h{curl_url()};
+    
+    CURLUcode rc = curl_url_set(h, CURLUPART_URL, url.c_str(), CURLU_DEFAULT_SCHEME);
+    if (rc != CURLUE_OK) {
+        throw std::runtime_error("Bad URL");
+    }
+    
+    char *url_normalized;
+    
+    if (curl_url_get(h, CURLUPART_URL, &url_normalized, 0) != CURLUE_OK) {
+        throw std::runtime_error("Failed to normalize URL");
+    }
+
+    std::string result{url_normalized};
+    curl_free(url_normalized);
+
+    return result;
+#else
+    return url;
+#endif
+}
+
+bool url_equals(const std::string& url1, const std::string& url2) {
+    try {
+        return url_normalize(url1) == url_normalize(url2);
+    }
+    catch (const std::runtime_error& e) {
+        return false;
+    }
+}
+
+}
 
 namespace federated_tls_auth {
 
@@ -124,7 +186,7 @@ server_connection_info get_server(const string& metadata_path,
 
     pt::ptree entity;
     for (const auto& cur : itr->second) {
-        if (cur.second.get<string>("entity_id") == entity_id) {
+        if (url_equals(cur.second.get<string>("entity_id"), entity_id)) {
             entity = cur.second;
         }
     }
