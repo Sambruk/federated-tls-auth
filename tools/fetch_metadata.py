@@ -28,18 +28,13 @@ def get_and_verify(url, keys, output: str) -> bool:
     try:
         with urllib.request.urlopen(url) as webfile:
             sig = webfile.read()
-    except urllib.error.URLError:
-        error_print("Failed to download metadata from", url)
-        return False
+    except urllib.error.URLError as e:
+        raise RuntimeError("Failed to get URL " + url + " (" + str(e) + ")")
 
     jwsdict = json.loads(sig)
     
-    try:
-        with open(keys, 'r') as keysfile:
-            keyset_str = keysfile.read()
-    except OSError:
-        error_print("Failed to read key set from file", keys)
-        return False
+    with open(keys, 'r') as keysfile:
+        keyset_str = keysfile.read()
 
     payload = jwsdict['payload']
     for s in jwsdict['signatures']:
@@ -61,7 +56,6 @@ def get_and_verify(url, keys, output: str) -> bool:
         except jws.JWSError:
             continue
 
-    error_print("Failed to verify the signature")
     return False
 
 def still_valid(cached: str) -> bool:
@@ -100,14 +94,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.cached != None and os.path.isfile(args.cached) and still_valid(args.cached):
-        try:
-            shutil.copyfile(args.cached, args.output)
-        except shutil.SameFileError:
-            pass
-        except:
-            error_print("Failed to copy cached version to new version")
-            sys.exit(2)
+    try:
+        if args.cached != None and os.path.isfile(args.cached) and still_valid(args.cached):
+            try:
+                shutil.copyfile(args.cached, args.output)
+            except shutil.SameFileError:
+                pass
+            except:
+                raise RuntimeError("Failed to copy cached version to new version")
             
-    elif not get_and_verify(args.url, args.keys, args.output):
+        elif not get_and_verify(args.url, args.keys, args.output):
+            raise RuntimeError("Failed to verify the signature")
+    except Exception as e:
+        error_print(e)
         sys.exit(1)
