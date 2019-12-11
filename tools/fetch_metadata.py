@@ -12,6 +12,9 @@ import urllib.request
 import sys
 from jose import jws
 from datetime import datetime, timedelta
+import os.path
+import shutil
+import time
 
 default_metadata_url = 'https://md.swefed.se/kontosynk/kontosynk-prod-1.jws'
 
@@ -61,10 +64,19 @@ def get_and_verify(url, keys, output: str) -> bool:
     error_print("Failed to verify the signature")
     return False
 
+def still_valid(cached: str) -> bool:
+    """Checks if a metadata file is still valid according to its cache_ttl"""
+    with open(cached, 'r') as f:
+        cached_dict = json.load(f)
+
+    cache_ttl = cached_dict.get('cache_ttl', 3600)
+    mtime = os.path.getmtime(cached)
+    
+    return time.time() < mtime + cache_ttl
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Download and verify SCIM authentication metadata')
+    parser = argparse.ArgumentParser(description='Download and verify federated TLS authentication metadata')
 
     parser.add_argument('--url',
                         dest='url',
@@ -79,7 +91,23 @@ if __name__ == '__main__':
                         dest='output',
                         help='where to write the verified metadata',
                         required=True)
+    parser.add_argument('--cached',
+                        dest='cached',
+                        help=("optional path to an earlier downloaded version, "
+                              "if its cache TTL hasn't expired this version "
+                              "will be re-used instead of fetching a new"),
+                        required=False)
 
     args = parser.parse_args()
 
-    sys.exit(0 if get_and_verify(args.url, args.keys, args.output) else 1);
+    if args.cached != None and os.path.isfile(args.cached) and still_valid(args.cached):
+        try:
+            shutil.copyfile(args.cached, args.output)
+        except shutil.SameFileError:
+            pass
+        except:
+            error_print("Failed to copy cached version to new version")
+            sys.exit(2)
+            
+    elif not get_and_verify(args.url, args.keys, args.output):
+        sys.exit(1)
